@@ -22,7 +22,7 @@ Configuration
   <source>
     type docker_inspect
     emit_interval 10
-    tag "docker.#{Socket.gethostname}"
+    tag docker
     add_addr_tag yes
   </source>
 
@@ -35,6 +35,8 @@ docker_url
   specify docker_url if remote. ex: ``tcp://example.com:5422``. If docker runs local, no need to specify this param.
 add_addr_tag
   if specify some string such as 'yes', add local host ipv4 addr. (default: nil)
+only_changed
+  if yes, only emit when docker inspect is changed.
 
 License
 ----------

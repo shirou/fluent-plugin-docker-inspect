@@ -6,6 +6,8 @@ module Fluent
     config_param :docker_url, :string, :default => nil
     config_param :tag, :string, :default => nil
     config_param :add_addr_tag, :string, :default => nil
+    config_param :filter, :string, :default => nil
+    config_param :only_changed, :string, :default => nil
 
     unless method_defined?(:log)
       define_method(:log) { $log }
@@ -80,7 +82,11 @@ module Fluent
         tag = [tag, @host_addr].join(".")
       end
 
-      get_inspect.each { | i |
+      inspect = get_inspect
+      if inspect.length == 0
+        return
+      end
+      inspect.each { | i |
         @es.add(time, i)
       }
       router.emit_stream(tag, @es)
@@ -97,7 +103,16 @@ module Fluent
     end
 
     def get_containers
-      Docker::Container.all(:all => true)
+      begin
+        if @filter
+          Docker::Container.all(:all => true, :filters => @filter)
+        else
+          Docker::Container.all(:all => true)
+        end
+      rescue Exception => ex
+        @log.error ex
+        return []
+      end
     end
 
     def get_inspect
@@ -106,6 +121,10 @@ module Fluent
       get_containers.each { |c|
         result.push c.json
       }
+      if @only_changed && @last_inspect.to_s == result.to_s
+        return []
+      end
+      @last_inspect = result
 
       return result
     end
