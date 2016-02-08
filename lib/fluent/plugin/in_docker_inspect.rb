@@ -20,6 +20,7 @@ module Fluent
     config_param :add_addr_tag, :string, :default => nil
     config_param :filter, :string, :default => nil
     config_param :only_changed, :bool, :default => true
+    config_param :include_tag, :string, :default => nil
 
     unless method_defined?(:log)
       define_method(:log) { $log }
@@ -117,6 +118,9 @@ module Fluent
             next if tmp == ""
             k[key_name] = tmp
             changed = true  # if nothing matched, not sent
+          end
+          if @include_tag
+            k[@include_tag] = tag
           end
           @es.add(time, k) if changed
         else

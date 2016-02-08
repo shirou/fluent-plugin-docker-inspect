@@ -26,6 +26,7 @@ Configuration
      add_addr_tag yes
      filter { "status": ["running"] }  # see Docker remote API
      only_changed true
+     include_tag tag
      <keys>
        id Id
        created Created
@@ -51,7 +52,8 @@ only_changed
   If true, only emit when docker inspect is changed. (default is true)
 keys
   If set, output values containes only specified keys and path(period separated value). Default is output all values as one JSON.
-
+include_tag
+  If set and keys are specified, add tags to specifed by include_tag
 License
 ----------
 
