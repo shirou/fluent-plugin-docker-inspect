@@ -1,3 +1,15 @@
+# convert dot-string to value in hash
+# ex: NetworkSettings.Ports -> hash[NetworkSettings][Ports]
+def dig(hash, dotted_path)
+  parts = dotted_path.split '.', 2
+  match = hash[parts[0]]
+  if !parts[1] or match.nil?
+    return match
+  else
+    return dig(match, parts[1])
+  end
+end
+
 module Fluent
   class DockerInspectInput < Input
     Fluent::Plugin.register_input('docker_inspect', self)
@@ -7,7 +19,7 @@ module Fluent
     config_param :tag, :string, :default => nil
     config_param :add_addr_tag, :string, :default => nil
     config_param :filter, :string, :default => nil
-    config_param :only_changed, :string, :default => nil
+    config_param :only_changed, :bool, :default => true
 
     unless method_defined?(:log)
       define_method(:log) { $log }
@@ -47,6 +59,16 @@ module Fluent
 
     def configure(conf)
       super
+
+      # Read configuration for keys and create a hash
+      @keys = Hash.new
+      conf.elements.select { |element| element.name == 'keys' }.each { |element|
+        element.each_pair { |key_name, path|
+          element.has_key?(key_name) # to suppress unread configuration warning
+          @keys[key_name] = path
+          @log.info "Added keys: #{key_name}=>#{@keys[key_name]}"
+        }
+      }
     end
 
     def start
@@ -87,7 +109,19 @@ module Fluent
         return
       end
       inspect.each { | i |
-        @es.add(time, i)
+        if @keys.length > 0  # keys are specfied
+          k = Hash.new
+          changed = false
+          @keys.each do |key_name, path|
+            tmp = dig(i, path)
+            next if tmp == ""
+            k[key_name] = tmp
+            changed = true  # if nothing matched, not sent
+          end
+          @es.add(time, k) if changed
+        else
+          @es.add(time, i)
+        end
       }
       router.emit_stream(tag, @es)
     end
@@ -121,6 +155,7 @@ module Fluent
       get_containers.each { |c|
         result.push c.json
       }
+      # check changed before or not
       if @only_changed && @last_inspect.to_s == result.to_s
         return []
       end

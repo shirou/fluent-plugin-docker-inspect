@@ -19,24 +19,38 @@ Configuration
 
 ::
 
-  <source>
-    type docker_inspect
-    emit_interval 10
-    tag docker
-    add_addr_tag yes
-  </source>
-
+   <source>
+     type docker_inspect
+     emit_interval 30
+     tag docker.inspects
+     add_addr_tag yes
+     filter { "status": ["running"] }  # see Docker remote API
+     only_changed true
+     <keys>
+       id Id
+       created Created
+       path Path
+       status State.Status
+       ports NetworkSettings.Ports
+       ip_addr NetworkSettings.IPAddress
+       mac_addr NetworkSettings.MacAddress
+     </keys>
+   </source>
 
 emit_interval
-  emit interval by second. (default 60 sec)
+  Emit interval by second. (default 60 sec)
 tag
   fluentd tag.
 docker_url
-  specify docker_url if remote. ex: ``tcp://example.com:5422``. If docker runs local, no need to specify this param.
+  Specify docker_url if remote. ex: ``tcp://example.com:5422``. If docker runs local, no need to specify this param.
 add_addr_tag
-  if specify some string such as 'yes', add local host ipv4 addr. (default: nil)
+  If specify some string such as 'yes', add local host ipv4 addr. (default: nil).
+filter
+  Set fileter about container. See Docker remote API to specify params.
 only_changed
-  if yes, only emit when docker inspect is changed.
+  If true, only emit when docker inspect is changed. (default is true)
+keys
+  If set, output values containes only specified keys and path(period separated value). Default is output all values as one JSON.
 
 License
 ----------
